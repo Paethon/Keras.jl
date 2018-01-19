@@ -67,7 +67,7 @@ export Layer, weights!, config, input, output, input_shape, output_shape
 
 module Layers
 
-import PyCall: PyObject, pycall
+import PyCall: PyObject, pycall, pybuiltin
 
 import ..Keras
 import ..Keras: PyDoc
@@ -87,6 +87,7 @@ const keras_layers = Dict{String, Array}(
         "Lambda",
         "ActivityRegularization",
         "Masking",
+        "InputLayer",
     ],
     "convolutional" => [
         "Conv1D",
@@ -166,6 +167,17 @@ for (submod, layers) in keras_layers
 
                 @doc PyDoc(Keras._layers, Symbol($l)) function $layer_name(args...; kwargs...)
                     new(Keras._layers[Symbol($l)](args...; kwargs...))
+                end
+
+                # Create Layer from existing Keras layer PyObject
+                function $layer_name(o::PyObject)
+                    # Check if it is correct layer
+                    if !pybuiltin(:isinstance)(o, Keras._layers[Symbol($l)])
+                        msg = string("Tried to create layer ", $l, ", but ", o, " is not matching ", Keras._layers[Symbol($l)])
+                        throw(ParseError(msg))
+                    end
+                    # Wrap PyObject
+                    new(o)
                 end
             end
 
